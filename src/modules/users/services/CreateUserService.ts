@@ -1,8 +1,10 @@
 import { inject, injectable } from 'tsyringe';
+import path from 'path';
 
 import AppError from '@shared/errors/AppError';
 
 import IHashProvider from '@shared/container/providers/HashProvider/models/IHashProvider';
+import IMailProvider from '@shared/container/providers/MailProvider/models/IMailProvider';
 import IUsersRepository from '../repositories/IUsersRepository';
 
 import User from '../infra/typeorm/entities/User';
@@ -23,6 +25,9 @@ export default class CreateUserService {
 
     @inject('HashProvider')
     private hashProvider: IHashProvider,
+
+    @inject('MailProvider')
+    private mailProvider: IMailProvider,
   ) { }
 
   public async execute({
@@ -43,6 +48,20 @@ export default class CreateUserService {
     });
 
     await this.usersRepository.save(user);
+
+    const templateDataFile = path.resolve(__dirname, '..', 'views', 'create_account.hbs');
+
+    await this.mailProvider.sendMail({
+      to: {
+        name,
+        email,
+      },
+      subject: 'Criação de conta',
+      templateData: {
+        file: templateDataFile,
+        variables: { name },
+      },
+    });
 
     return user;
   }
